@@ -1,8 +1,13 @@
 /**
  * ToDo
  * ----------------
- * Calendarを選択させる
+ *
+ * [Done] Calendarを選択させる
  * 月ごとのグラフを出力する
+ * pushState/breadcrumbs/back UI or something
+ * Loading Interface
+ * On/Off Repeat Event
+ * On/Off All day Event
  *
  * API 
  * http://code.google.com/intl/ja/apis/gdata/jsdoc/2.2/index.html
@@ -15,8 +20,10 @@ google.load("gdata", "2");
  * Google Auth wrapper
  */
 var GoogleAuth = (function(){
+  // private
   var scope = "https://www.google.com/calendar/feeds/";
   var token;
+
   /**
    * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#login
    * @return void
@@ -49,9 +56,20 @@ var GoogleAuth = (function(){
   return this;
 })();
 
-var GCalService = function(){
-  
-}
+
+var GCalService = (function(){
+
+})();
+/**
+ *
+ *
+ */
+var App = (function(){
+  this.init = function(){
+    
+  }
+  return this;
+})();
 
 var service = null;
 
@@ -76,41 +94,127 @@ var privateUrl = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taa
 
 google.setOnLoadCallback(getMyFeed);
 
+
 function getMyFeed(){
+  $ = jQuery;
+  
+  /**
+   *
+   * @param Object elements
+   * @param Function callback function(element, jQuery)
+   */ 
+  var listify = function(elements, callback){
+    $('#view').empty();
+    var div = $(document.createElement('ul'));
+    $.each(elements, function(k, e){
+      var li = $(document.createElement('li'));
+      var button = $(document.createElement('a'));
+      callback(e, button);
+      div.append(li.append(button));
+    });
+    $('#view').append(div);
+  }
+  /**
+   *
+   * @param String url calendar feed url
+   */
+  var screenRecentFeeds = function(url){
+    getRecentFeeds(url).then(function(res){
+      listify(res, function(e, button){
+        var title = e.getTitle().getText();
+        var times = e.getTimes();
+        button.text(title + " " + times[0].startTime);
+      });
+    });
+  }
+  /**
+   *
+   */
+  var screenAllCalendars = function(){
+    retrieveAllCalendars().then(function(res){
+      listify(res, function(e, button){
+        var title = e.getTitle().getText();
+        button.text(title);
+        button.attr('href', '#');
+        button.click(function(){
+          var href = e.getLink().getHref()
+          screenRecentFeeds(href);
+          return false;
+        });
+      });
+    });
+  }
+
+  screenAllCalendars();
+}
+/**
+ *
+ * @return jQuery.Deferred resolve array of CalendarEventFeed?
+ */
+var getRecentFeeds = function(url){
   service = new google.gdata.calendar.CalendarService("calendar-sample");
   query = new google.gdata.calendar.CalendarEventQuery(url);
   query.setOrderBy(google.gdata.calendar.CalendarEventQuery.ORDERBY_START_TIME);
-  query.setSortOrder(google.gdata.calendar.CalendarEventQuery.SORTORDER_ASCENDING);
+  query.setSortOrder(google.gdata.calendar.CalendarEventQuery.SORTORDER_DESCENDING);
   query.setSingleEvents(true);
   query.setMaxResults(10);
   var start = new google.gdata.DateTime.fromIso8601("2010-01-01");
   var end = new google.gdata.DateTime.fromIso8601("2012-12-31"); 
   query.setMinimumStartTime(start);
   query.setMaximumStartTime(end);
-  service.getEventsFeed(query, callback, handleError);
   
-  retrieveAllCalendars();
-
-}
-
-
-function callback(result) {
-  var entries = result.feed.entry;
-  var res = "";
-  for (var i = 0; i < entries.length; i++) {
-    var entry = entries[i];
-    var title = entry.getTitle().getText();
-    var times = entry.getTimes();
-    res += (i + 1) + ": " + title + " (" + times[0].startTime + ")<br />";
+  var dfd = jQuery.Deferred();
+  var callback = function(result) {
+    dfd.resolve(result.feed.entry);
   }
-  document.getElementById("view").innerHTML = res;
+
+  var handleError = function(error) {
+    document.getElementById("view").innerHTML = error;
+    dfd.reject(error);
+  }
+  service.getEventsFeed(query, callback, handleError);
+
+  return dfd.promise();
 }
 
-function handleError(error) {
-  document.getElementById("view").innerHTML = error;
+/**
+ *
+ * Retrieve all calendars 
+ * @see http://code.google.com/intl/ja/apis/calendar/data/1.0/developers_guide_js.html#Interactive_Samples
+ * @return jQuery.Deferred resolve array of CalendarEntry
+ */
+var retrieveAllCalendars = function(){
+  // Create the calendar service object
+  //var calendarService = new google.gdata.calendar.CalendarService('GoogleInc-jsguide-1.0');
+  var calendarService = new google.gdata.calendar.CalendarService("calendar-sample");
+
+  // The default "allcalendars" feed is used to retrieve a list of all 
+  // calendars (primary, secondary and subscribed) of the logged-in user
+  var feedUri = 'https://www.google.com/calendar/feeds/default/allcalendars/full';
+
+  var dfd = jQuery.Deferred();
+
+  // The callback method that will be called when getAllCalendarsFeed() returns feed data
+  var callback = function(result) {
+
+    // Obtain the array of CalendarEntry
+    var entries = result.feed.entry;
+    dfd.resolve(entries);
+  }
+
+  // Error handler to be invoked when getAllCalendarsFeed() produces an error
+  var handleError = function(error) {
+    document.getElementById("view").innerHTML = error;
+    dfd.reject(error);
+  }
+  
+  // Submit the request using the calendar service object
+  calendarService.getAllCalendarsFeed(feedUri, callback, handleError);
+
+  return dfd.promise();
 }
 
-
+// --------------------------------
 
 function doAction(){
   var service = null;
@@ -147,49 +251,11 @@ function doAction(){
 
 
 
-// --------------------------------
-
 function PRINT(e){
   console.log(e);
 }
-function retrieveAllCalendars(){
-  /* 
-   * Retrieve all calendars 
-   */
-  // Create the calendar service object
-  //var calendarService = new google.gdata.calendar.CalendarService('GoogleInc-jsguide-1.0');
-  var calendarService = new google.gdata.calendar.CalendarService
-    ("calendar-sample");
-
-  // The default "allcalendars" feed is used to retrieve a list of all 
-  // calendars (primary, secondary and subscribed) of the logged-in user
-  var feedUri = 'https://www.google.com/calendar/feeds/default/allcalendars/full';
-
-  // The callback method that will be called when getAllCalendarsFeed() returns feed data
-  var callback = function(result) {
-
-    // Obtain the array of CalendarEntry
-    var entries = result.feed.entry;
-
-    for (var i = 0; i < entries.length; i++) {
-      var calendarEntry = entries[i];
-      var calendarTitle = calendarEntry.getTitle().getText();
-      PRINT('Calendar title = ' + calendarTitle);
-      console.log(calendarEntry.getLink().getHref(), calendarEntry.getId().getValue());
-    }
-  }
-
-  // Error handler to be invoked when getAllCalendarsFeed() produces an error
-  var handleError = function(error) {
-    PRINT(error);
-  }
-
-  // Submit the request using the calendar service object
-  calendarService.getAllCalendarsFeed(feedUri, callback, handleError);
-}
 
 function createSingleEvent(){
-
   /*
    * Create a single event
    */ 
