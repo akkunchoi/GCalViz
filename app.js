@@ -1,6 +1,57 @@
-// http://libro.tuyano.com/index3?id=95001
-//google.load("jquery", "1.6");
+/**
+ * ToDo
+ * ----------------
+ * Calendarを選択させる
+ * 月ごとのグラフを出力する
+ *
+ * API 
+ * http://code.google.com/intl/ja/apis/gdata/jsdoc/2.2/index.html
+ */
+
+google.load("jquery", "1.6.4");
 google.load("gdata", "2");
+
+/**
+ * Google Auth wrapper
+ */
+var GoogleAuth = (function(){
+  var scope = "https://www.google.com/calendar/feeds/";
+  var token;
+  /**
+   * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#login
+   * @return void
+   */
+  this.login = function(){
+    token = google.accounts.user.login(scope);
+  }
+  /**
+   *
+   * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#logout_
+   */ 
+  this.logout = function(){
+    if (this.checkLogin()){
+      google.accounts.user.logout();
+    }
+  }
+  /*
+  this.getInfo = function(callback){
+    
+  }
+  */
+  /**
+   *
+   * @return boolean true if user logged in
+   */ 
+  this.checkLogin = function(){
+    token = google.accounts.user.checkLogin(scope);
+    return token != "";
+  }
+  return this;
+})();
+
+var GCalService = function(){
+  
+}
 
 var service = null;
 
@@ -37,6 +88,8 @@ function getMyFeed(){
   query.setMinimumStartTime(start);
   query.setMaximumStartTime(end);
   service.getEventsFeed(query, callback, handleError);
+  
+  retrieveAllCalendars();
 
 }
 
@@ -58,14 +111,6 @@ function handleError(error) {
 }
 
 
-function doLogin(){
-  var scope = "https://www.google.com/calendar/feeds/";
-  var token = google.accounts.user.login(scope);
-  token = google.accounts.user.checkLogin(scope);
-  //console.log(token);
-  //retrieveAllCalendars();
-  //createSingleEvent();
-}
 
 function doAction(){
   var service = null;
@@ -73,9 +118,7 @@ function doAction(){
   service = new google.gdata.calendar.CalendarService
     ("calendar-sample");
 
-  var scope = "https://www.google.com/calendar/feeds/";
-  token = google.accounts.user.checkLogin(scope);
-  if (token == ""){
+  if (!GoogleAuth.checkLogin()){
     alert("ログインしてないよ！");
     return;
   }
@@ -101,6 +144,10 @@ function doAction(){
   service.insertEntry(url,entry,func,handleError,
       google.gdata.calendar.CalendarEventEntry);
 }
+
+
+
+// --------------------------------
 
 function PRINT(e){
   console.log(e);
@@ -128,6 +175,7 @@ function retrieveAllCalendars(){
       var calendarEntry = entries[i];
       var calendarTitle = calendarEntry.getTitle().getText();
       PRINT('Calendar title = ' + calendarTitle);
+      console.log(calendarEntry.getLink().getHref(), calendarEntry.getId().getValue());
     }
   }
 
