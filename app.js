@@ -3,7 +3,8 @@
  * ----------------
  *
  * [Done] Calendarを選択させる
- * 月ごとのグラフを出力する
+ * 月間グラフを出力する
+ * 月を変更する
  * pushState/breadcrumbs/back UI or something
  * Loading Interface
  * On/Off Repeat Event
