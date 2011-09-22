@@ -1,2 +1,12 @@
 body{
 }
+
+table.timetable{
+    border-collapse: collapse;
+}
+table.timetable td{
+    border: 1px solid black;
+}
+table.timetable .filled{
+    background-color: #F00;
+}
