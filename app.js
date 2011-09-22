@@ -21,6 +21,7 @@ google.load("gdata", "2");
  * Google Auth wrapper
  */
 var GoogleAuth = (function(){
+  var self = {};
   // private
   var scope = "https://www.google.com/calendar/feeds/";
   var token;
@@ -29,14 +30,14 @@ var GoogleAuth = (function(){
    * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#login
    * @return void
    */
-  this.login = function(){
+  self.login = function(){
     token = google.accounts.user.login(scope);
   }
   /**
    *
    * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#logout_
    */ 
-  this.logout = function(){
+  self.logout = function(){
     if (this.checkLogin()){
       google.accounts.user.logout();
     }
@@ -50,170 +51,176 @@ var GoogleAuth = (function(){
    *
    * @return boolean true if user logged in
    */ 
-  this.checkLogin = function(){
+  self.checkLogin = function(){
     token = google.accounts.user.checkLogin(scope);
     return token != "";
   }
-  return this;
+  return self;
 })();
 
 
 var GCalService = (function(){
+  return function(){
+    var service = null;
+    /**
+     *
+     * @return google.gdata.calendar.CalendarService
+     */
+    this.getService = function(){
+      service = service || new google.gdata.calendar.CalendarService("calendar-sample");
+      return service;
+    }
+    /**
+     *
+     * @return jQuery.Deferred resolve array of CalendarEventFeed?
+     */
+    this.getRecentFeeds = function(url){
+      query = new google.gdata.calendar.CalendarEventQuery(url);
+      query.setOrderBy(google.gdata.calendar.CalendarEventQuery.ORDERBY_START_TIME);
+      query.setSortOrder(google.gdata.calendar.CalendarEventQuery.SORTORDER_DESCENDING);
+      query.setSingleEvents(true);
+      query.setMaxResults(10);
+      var start = new google.gdata.DateTime.fromIso8601("2010-01-01");
+      var end = new google.gdata.DateTime.fromIso8601("2012-12-31"); 
+      query.setMinimumStartTime(start);
+      query.setMaximumStartTime(end);
+      
+      var dfd = jQuery.Deferred();
+      var callback = function(result) {
+        dfd.resolve(result.feed.entry);
+      }
 
+      var handleError = function(error) {
+        document.getElementById("view").innerHTML = error;
+        dfd.reject(error);
+      }
+      this.getService().getEventsFeed(query, callback, handleError);
+
+      return dfd.promise();
+    }
+
+    /**
+     *
+     * Retrieve all calendars 
+     * @see http://code.google.com/intl/ja/apis/calendar/data/1.0/developers_guide_js.html#Interactive_Samples
+     * @return jQuery.Deferred resolve array of CalendarEntry
+     */
+    this.retrieveAllCalendars = function(){
+      // The default "allcalendars" feed is used to retrieve a list of all 
+      // calendars (primary, secondary and subscribed) of the logged-in user
+      var feedUri = 'https://www.google.com/calendar/feeds/default/allcalendars/full';
+
+      var dfd = jQuery.Deferred();
+
+      // The callback method that will be called when getAllCalendarsFeed() returns feed data
+      var callback = function(result) {
+
+        // Obtain the array of CalendarEntry
+        var entries = result.feed.entry;
+        dfd.resolve(entries);
+      }
+
+      // Error handler to be invoked when getAllCalendarsFeed() produces an error
+      var handleError = function(error) {
+        document.getElementById("view").innerHTML = error;
+        dfd.reject(error);
+      }
+      
+      // Submit the request using the calendar service object
+      this.getService().getAllCalendarsFeed(feedUri, callback, handleError);
+
+      return dfd.promise();
+    }
+  }
 })();
 /**
  *
  *
  */
 var App = (function(){
-  this.init = function(){
-    
+  var self = {};
+  var service = new GCalService();
+  self.getMyFeed = function(){
+    $ = jQuery;
+    /**
+     *
+     * @param Object elements
+     * @param Function callback function(element, jQuery)
+     */ 
+    var listify = function(elements, callback){
+      $('#view').empty();
+      var div = $(document.createElement('ul'));
+      $.each(elements, function(k, e){
+        var li = $(document.createElement('li'));
+        var button = $(document.createElement('a'));
+        callback(e, button);
+        div.append(li.append(button));
+      });
+      $('#view').append(div);
+    }
+    /**
+     *
+     * @param String url calendar feed url
+     */
+    var screenRecentFeeds = function(url){
+      service.getRecentFeeds(url).then(function(res){
+        listify(res, function(e, button){
+          var title = e.getTitle().getText();
+          var times = e.getTimes();
+          button.text(title + " " + times[0].startTime);
+        });
+      });
+    }
+    /**
+     *
+     */
+    var screenAllCalendars = function(){
+      service.retrieveAllCalendars().then(function(res){
+        listify(res, function(e, button){
+          var title = e.getTitle().getText();
+          button.text(title);
+          button.attr('href', '#');
+          button.click(function(){
+            var href = e.getLink().getHref()
+            screenRecentFeeds(href);
+            return false;
+          });
+        });
+      });
+    }
+    screenAllCalendars();
   }
-  return this;
+  self.start = function(){
+    this.getMyFeed();
+  }
+  return self;
 })();
 
-var service = null;
+google.setOnLoadCallback(function(){
+  App.start();
+});
+
+// --------------------------------
 
 // == 間違い１==
+// 
 // 非公開カレンダーは ..../public/full では
 // Error: このカレンダーの一般公開権限がありません。このカレンダーのオーナーであれば、カレンダーの共有設定を変更するとカレンダーを一般公開できます。
 // と言われる
 // var url = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/public/full";
+//
 // == 間違い２==
 // Protocolは http ではなく https で。でなければこのように言われる
 // 401 Authorization required
 // Unsafe JavaScript attempt to access frame with URL about:blank from frame with URL http://127.0.0.1/a/google-calendar-js/. Domains, protocols and ports must match.
 //
-// private calendar
-var url = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/private/full";
+// my private calendar
+//var url = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/private/full";
 //var url = "https://www.google.com/calendar/feeds/default/private/full";
-var privateUrl = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/private/full";
+//var privateUrl = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/private/full";
 //var privateUrl = "https://www.google.com/calendar/feeds/default/private/full";
-
 // public calendar
 // var url = "http://www.google.com/calendar/feeds/fvijvohm91uifvd9hratehf65k@group.calendar.google.com/public/full";
-
-google.setOnLoadCallback(getMyFeed);
-
-
-function getMyFeed(){
-  $ = jQuery;
-  
-  /**
-   *
-   * @param Object elements
-   * @param Function callback function(element, jQuery)
-   */ 
-  var listify = function(elements, callback){
-    $('#view').empty();
-    var div = $(document.createElement('ul'));
-    $.each(elements, function(k, e){
-      var li = $(document.createElement('li'));
-      var button = $(document.createElement('a'));
-      callback(e, button);
-      div.append(li.append(button));
-    });
-    $('#view').append(div);
-  }
-  /**
-   *
-   * @param String url calendar feed url
-   */
-  var screenRecentFeeds = function(url){
-    getRecentFeeds(url).then(function(res){
-      listify(res, function(e, button){
-        var title = e.getTitle().getText();
-        var times = e.getTimes();
-        button.text(title + " " + times[0].startTime);
-      });
-    });
-  }
-  /**
-   *
-   */
-  var screenAllCalendars = function(){
-    retrieveAllCalendars().then(function(res){
-      listify(res, function(e, button){
-        var title = e.getTitle().getText();
-        button.text(title);
-        button.attr('href', '#');
-        button.click(function(){
-          var href = e.getLink().getHref()
-          screenRecentFeeds(href);
-          return false;
-        });
-      });
-    });
-  }
-
-  screenAllCalendars();
-}
-/**
- *
- * @return jQuery.Deferred resolve array of CalendarEventFeed?
- */
-var getRecentFeeds = function(url){
-  service = new google.gdata.calendar.CalendarService("calendar-sample");
-  query = new google.gdata.calendar.CalendarEventQuery(url);
-  query.setOrderBy(google.gdata.calendar.CalendarEventQuery.ORDERBY_START_TIME);
-  query.setSortOrder(google.gdata.calendar.CalendarEventQuery.SORTORDER_DESCENDING);
-  query.setSingleEvents(true);
-  query.setMaxResults(10);
-  var start = new google.gdata.DateTime.fromIso8601("2010-01-01");
-  var end = new google.gdata.DateTime.fromIso8601("2012-12-31"); 
-  query.setMinimumStartTime(start);
-  query.setMaximumStartTime(end);
-  
-  var dfd = jQuery.Deferred();
-  var callback = function(result) {
-    dfd.resolve(result.feed.entry);
-  }
-
-  var handleError = function(error) {
-    document.getElementById("view").innerHTML = error;
-    dfd.reject(error);
-  }
-  service.getEventsFeed(query, callback, handleError);
-
-  return dfd.promise();
-}
-
-/**
- *
- * Retrieve all calendars 
- * @see http://code.google.com/intl/ja/apis/calendar/data/1.0/developers_guide_js.html#Interactive_Samples
- * @return jQuery.Deferred resolve array of CalendarEntry
- */
-var retrieveAllCalendars = function(){
-  // Create the calendar service object
-  //var calendarService = new google.gdata.calendar.CalendarService('GoogleInc-jsguide-1.0');
-  var calendarService = new google.gdata.calendar.CalendarService("calendar-sample");
-
-  // The default "allcalendars" feed is used to retrieve a list of all 
-  // calendars (primary, secondary and subscribed) of the logged-in user
-  var feedUri = 'https://www.google.com/calendar/feeds/default/allcalendars/full';
-
-  var dfd = jQuery.Deferred();
-
-  // The callback method that will be called when getAllCalendarsFeed() returns feed data
-  var callback = function(result) {
-
-    // Obtain the array of CalendarEntry
-    var entries = result.feed.entry;
-    dfd.resolve(entries);
-  }
-
-  // Error handler to be invoked when getAllCalendarsFeed() produces an error
-  var handleError = function(error) {
-    document.getElementById("view").innerHTML = error;
-    dfd.reject(error);
-  }
-  
-  // Submit the request using the calendar service object
-  calendarService.getAllCalendarsFeed(feedUri, callback, handleError);
-
-  return dfd.promise();
-}
 
 // --------------------------------
 
