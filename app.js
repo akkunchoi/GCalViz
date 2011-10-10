@@ -1,22 +1,4 @@
 /**
- * ToDo
- * ----------------
- *
- * [Done] Calendarを選択させる
- * [Done] 月間グラフを出力する
- *   [Done] 今月の一覧を取得する
- *   [Done] All day Eventを除く
- * 分単位で出力する
- * [Done] 月を変更する
- * 日単位、月単位で合計時間を出力
- * 薬いつ飲んだか検出したい。汎用化難しいか
- * pushState/breadcrumbs/back UI or something
- * Loading Interface
- * On/Off Repeat Event
- * On/Off All day Event
- * iPhone最適化
- * mouseoverで詳細表示
- *
  * API 
  * http://code.google.com/intl/ja/apis/gdata/jsdoc/2.2/index.html
  */
