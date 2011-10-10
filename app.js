@@ -8,10 +8,13 @@
  *   [Done] All day Eventを除く
  * 分単位で出力する 
  * 月を変更する
+ * 日単位、月単位で合計時間を出力
+ * 薬いつ飲んだか検出したい。汎用化難しいか
  * pushState/breadcrumbs/back UI or something
  * Loading Interface
  * On/Off Repeat Event
  * On/Off All day Event
+ * iPhone最適化
  *
  * API 
  * http://code.google.com/intl/ja/apis/gdata/jsdoc/2.2/index.html
@@ -20,57 +23,61 @@
 google.load("jquery", "1.6.4");
 google.load("gdata", "2");
 
+
+
 /**
  * Google Auth wrapper
+ * ユーザー名とかは取得できないっぽい？
+ * 
  */
 var GoogleAuth = (function(){
-  var self = {};
-  // private
-  var scope = "https://www.google.com/calendar/feeds/";
-  var token;
+  var GoogleAuth = function(scope){
+    // private
+    var token;
 
-  /**
-   * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#login
-   * @return void
-   */
-  self.login = function(){
-    token = google.accounts.user.login(scope);
-  }
-  /**
-   *
-   * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#logout_
-   */ 
-  self.logout = function(){
-    if (this.checkLogin()){
-      google.accounts.user.logout();
+    /**
+     * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#login
+     * @return void
+     */
+    this.login = function(){
+      token = google.accounts.user.login(scope);
+    }
+    /**
+     *
+     * @see http://code.google.com/intl/ja/apis/gdata/docs/js-authsub.html#logout_
+     */ 
+    this.logout = function(){
+      if (this.checkLogin()){
+        google.accounts.user.logout();
+      }
+    }
+    this.getInfo = function(callback){
+      google.accounts.user.getInfo(callback);
+    }
+    this.getStatus = function(){
+      return google.accounts.user.getStatus(scope);
+    }
+    /**
+     *
+     * @return boolean true if user logged in
+     */ 
+    this.checkLogin = function(){
+      token = google.accounts.user.checkLogin(scope);
+      return token != "";
     }
   }
-  /*
-  this.getInfo = function(callback){
-    
-  }
-  */
-  /**
-   *
-   * @return boolean true if user logged in
-   */ 
-  self.checkLogin = function(){
-    token = google.accounts.user.checkLogin(scope);
-    return token != "";
-  }
-  return self;
+  return GoogleAuth;
 })();
 
-
 var GCalService = (function(){
-  return function(){
+  var GCalService = function(serviceName){
     var service = null;
     /**
      *
      * @return google.gdata.calendar.CalendarService
      */
     this.getService = function(){
-      service = service || new google.gdata.calendar.CalendarService("calendar-sample");
+      service = service || new google.gdata.calendar.CalendarService(serviceName);
       return service;
     }
     /**
@@ -181,8 +188,17 @@ var GCalService = (function(){
       return dfd.promise();
     }
   }
+  return GCalService;
 })();
 
+/**
+ * @class DateTime
+ * Immutable Date wrapper
+ * 
+ * console.log(new DateTime().getYear());  
+ * console.log(new DateTime().getMonth());  
+ * console.log(new DateTime().getDay());  
+ */
 var DateTime = (function(){
   var aDayMilliSecond = 86400000;
   var DateTime = function(obj){
@@ -281,21 +297,24 @@ var DateTime = (function(){
   }
   return DateTime;
 })();
-/*
-console.log(new DateTime().getYear());  
-console.log(new DateTime().getMonth());  
-console.log(new DateTime().getDay());  
-*/
 
 /**
- *
+ * @class App
  *
  */
 var App = (function(){
-  var self = {};
-  var service = new GCalService();
-  self.getMyFeed = function(){
-    $ = jQuery;
+  /**
+   * @constructor
+   * 前提：onLoad完了
+   * 
+   */
+  var App = function(){
+    var self = this;
+    var $ = jQuery;
+    var gcalAuth = new GoogleAuth("https://www.google.com/calendar/feeds/");
+    var service = new GCalService("GCalViz");
+    
+    var view = $('#view');
     /**
      *
      * @param Object elements
@@ -309,11 +328,17 @@ var App = (function(){
         callback(e, button);
         div.append(li.append(button));
       });
-      $('#view').append(div);
+      view.append(div);
     }
+    /**
+     * alias for document.createElement
+     */
     var t = function(tag){
       return $(document.createElement(tag));
     }
+    /**
+     * 一ヶ月をeach
+     */
     var eachDayOfMonth = function(date, callback){
       var monthFirst = new DateTime(date).getMonthFirst();
       var datetime = new DateTime(date).getMonthFirst();
@@ -326,14 +351,14 @@ var App = (function(){
      *
      * @param google.gdata.calendar.CalendarEntry calendar
      */
-    var screenRecentFeeds = function(calendar){
+    this.showRecentFeeds = function(calendar){
       var url = calendar.getLink().getHref()
-      var field = $('#view');
+      var field = view;
       field.empty();
 
       var title = t('h2').appendTo(field);
       title.text(calendar.getTitle().getText());
-      
+
       var today = new Date();
       var date = new google.gdata.DateTime(today, true);
 
@@ -350,7 +375,7 @@ var App = (function(){
         return 'tt-' + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '-' + date.getHours();
       }
       eachDayOfMonth(today, function(day){
-        var tr = t('tr').appendTo(table);
+        var tr = t('tr').appendTo(tbody);
         var th = t('th').appendTo(tr);
         th.text(day.getDate());
         _(24).times(function(i){
@@ -360,7 +385,7 @@ var App = (function(){
           td.html('&nbsp;&nbsp;&nbsp;&nbsp;');
         });
       });
-      
+
       service.getFeeds(url, date).then(function(res){
         // 該当日時を色付け
         _.each(res, function(e){
@@ -371,7 +396,7 @@ var App = (function(){
           // 合計時間
           var ms = endDate.getTime() - startDate.getTime();
           var valHour  = Math.floor(ms / 3600 / 10) / 100;
-         
+
           var d = new DateTime(startDate);
           do{
             var a = $('#' + dateId(d.getDate()));
@@ -396,139 +421,49 @@ var App = (function(){
         */
       });
     }
-    /**
-     *
-     */
-    var screenAllCalendars = function(){
-      $('#view').empty();
+    this.start = function(){
+      var loginButton = $('#login-button');
+      var logoutButton = $('#logout-button');
+
+      loginButton.click(function(){
+        gcalAuth.login();
+      });
+      logoutButton.click(function(){
+        gcalAuth.logout();
+        location.reload();
+      });
+
+      if (gcalAuth.checkLogin()){
+        loginButton.addClass('disabled');
+//        this.getMyFeed();
+        this.showCalendars();
+      }else{
+        logoutButton.addClass('disabled');
+      }
+    }
+    this.showCalendars = function(){
+      view.empty();
+      t('h2').text('Loading...').appendTo(view);
       service.retrieveAllCalendars().then(function(res){
+        view.empty();
+        t('h2').text('Please choose a calendar').appendTo(view);
         listify(res, function(e, button){
           var title = e.getTitle().getText();
           button.text(title);
           button.attr('href', '#');
           button.click(function(){
-            screenRecentFeeds(e);
+            self.showRecentFeeds(e);
             return false;
           });
         });
       });
     }
-    screenAllCalendars();
+    this.start();
   }
-  self.start = function(){
-    this.getMyFeed();
-  }
-  return self;
+  return App;
 })();
 
 google.setOnLoadCallback(function(){
-  App.start();
+  new App();
 });
 
-// --------------------------------
-
-// == 間違い１==
-// 
-// 非公開カレンダーは ..../public/full では
-// Error: このカレンダーの一般公開権限がありません。このカレンダーのオーナーであれば、カレンダーの共有設定を変更するとカレンダーを一般公開できます。
-// と言われる
-// var url = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/public/full";
-//
-// == 間違い２==
-// Protocolは http ではなく https で。でなければこのように言われる
-// 401 Authorization required
-// Unsafe JavaScript attempt to access frame with URL about:blank from frame with URL http://127.0.0.1/a/google-calendar-js/. Domains, protocols and ports must match.
-//
-// my private calendar
-//var url = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/private/full";
-//var url = "https://www.google.com/calendar/feeds/default/private/full";
-//var privateUrl = "https://www.google.com/calendar/feeds/tpuq2b1csas8fe435qve0taab4@group.calendar.google.com/private/full";
-//var privateUrl = "https://www.google.com/calendar/feeds/default/private/full";
-// public calendar
-// var url = "http://www.google.com/calendar/feeds/fvijvohm91uifvd9hratehf65k@group.calendar.google.com/public/full";
-
-// --------------------------------
-
-function doAction(){
-  var service = null;
-  var url = privateUrl;
-  service = new google.gdata.calendar.CalendarService
-    ("calendar-sample");
-
-  if (!GoogleAuth.checkLogin()){
-    alert("ログインしてないよ！");
-    return;
-  }
-  var t1 = document.getElementById("time1").value;
-  var t2 = document.getElementById("time2").value;
-  var title = document.getElementById("title").value;
-  var start = new google.gdata.DateTime.fromIso8601(t1);
-
-  var end = new google.gdata.DateTime.fromIso8601(t2); 
-
-  var entry = new google.gdata.calendar.CalendarEventEntry();
-  entry.setTitle(google.gdata.atom.Text.create(title));
-
-  var when = new google.gdata.When();
-  when.setStartTime(start);
-  when.setEndTime(end);
-  entry.addTime(when);
-
-  var func = function(result) {
-    alert("イベントを追加しました。");
-    getMyFeed();
-  }
-  service.insertEntry(url,entry,func,handleError,
-      google.gdata.calendar.CalendarEventEntry);
-}
-
-
-
-function PRINT(e){
-  console.log(e);
-}
-
-function createSingleEvent(){
-  /*
-   * Create a single event
-   */ 
-
-  // Create the calendar service object
-  var calendarService = new google.gdata.calendar.CalendarService('GoogleInc-jsguide-1.0');
-
-  // The default "private/full" feed is used to insert event to the 
-  // primary calendar of the authenticated user
-  var feedUri = privateUrl
-
-  // Create an instance of CalendarEventEntry representing the new event
-  var entry = new google.gdata.calendar.CalendarEventEntry();
-
-  // Set the title of the event
-  entry.setTitle(google.gdata.atom.Text.create('JS-Client: insert event'));
-
-  // Create a When object that will be attached to the event
-  var when = new google.gdata.When();
-
-  // Set the start and end time of the When object
-  var startTime = google.gdata.DateTime.fromIso8601("2011-09-19T09:00:00.000-08:00");
-  var endTime = google.gdata.DateTime.fromIso8601("2011-09-19T10:00:00.000-08:00");
-  when.setStartTime(startTime);
-  when.setEndTime(endTime);
-
-  // Add the When object to the event 
-  entry.addTime(when);
-
-  // The callback method that will be called after a successful insertion from insertEntry()
-  var callback = function(result) {
-    PRINT('event created!');
-  }
-
-  // Error handler will be invoked if there is an error from insertEntry()
-  var handleError = function(error) {
-    PRINT(error);
-  }
-
-  // Submit the request using the calendar service object
-  calendarService.insertEntry(feedUri, entry, callback, 
-      handleError, google.gdata.calendar.CalendarEventEntry);
-}

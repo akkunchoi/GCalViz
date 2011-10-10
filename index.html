@@ -1,28 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>HTML5 sample</title>
-<link rel="stylesheet" type="text/css" href="./style.css">
-<script type="text/javascript" src="http://www.google.com/jsapi"></script>
-<script type="text/javascript" src="./dateformat.js"></script>
-<script type="text/javascript" src="./underscore-min.js"></script>
-<script type="text/javascript" src="./app.js"></script>
-</head>
-<body>
-  <h1>サンプル</h1>
+  <head>
+    <meta charset="UTF-8">
+    <title>GCalViz</title>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript" src="./dateformat.js"></script>
+    <script type="text/javascript" src="./underscore-min.js"></script>
+    <script type="text/javascript" src="./raphael-min.js"></script>
+    <script type="text/javascript" src="./app.js"></script>
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.3.0/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="./style.css">
+  </head>
+  <body>
+    <div class="container-fluid">
+      
+      <div class="sidebar">
+        <h1>GCalViz</h1>
+        <div id="user-auth">
+          <input id="login-button" type="button" class="btn" value="Sign in">
+          <input id="logout-button" type="button" class="btn" value="Sign out">
+        </div>
+      </div>
 
-  <img src="image.png">
-  <input type="button" value="Login" onclick="GoogleAuth.login();">
-  <input type="button" value="Logout" onclick="GoogleAuth.logout();">
-  <hr>
-  <!--
-  <input type="text" id="time1" value="2010-01-01"><br>
-  <input type="text" id="time2" value="2010-01-01"><br>
-  <input type="text" id="title"><br>
-  <input type="button" value="add" onclick="doAction();">
-  <hr>
-  -->
-  <div id="view" style="color:#096;"></div>
-</body>
+      <div class="content">
+        <div id="view"></div>
+      </div>
+    </div>
+
+      <!-- for gdata --><img src="image.png"><!-- gdata -->
+
+  </body>
 </html>

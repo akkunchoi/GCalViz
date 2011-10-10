@@ -1,12 +1,23 @@
 body{
 }
 
+h1{
+  font-size: 20px;
+  margin: 5px 0px;
+}
+
 table.timetable{
-    border-collapse: collapse;
+  width: 60%;
+  border-collapse: collapse;
 }
 table.timetable td{
-    border: 1px solid black;
+  border: 1px solid black;
 }
 table.timetable .filled{
-    background-color: #F00;
+  background-color: #F00;
+}
+table.timetable th, table.timetable td {
+  padding: 5px 5px 4px;
+  line-height: 8px;
+  text-align: left;
 }
