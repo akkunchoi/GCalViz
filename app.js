@@ -6,8 +6,8 @@
  * [Done] 月間グラフを出力する
  *   [Done] 今月の一覧を取得する
  *   [Done] All day Eventを除く
- * 分単位で出力する 
- * 月を変更する
+ * 分単位で出力する
+ * [Done] 月を変更する
  * 日単位、月単位で合計時間を出力
  * 薬いつ飲んだか検出したい。汎用化難しいか
  * pushState/breadcrumbs/back UI or something
@@ -15,6 +15,7 @@
  * On/Off Repeat Event
  * On/Off All day Event
  * iPhone最適化
+ * mouseoverで詳細表示
  *
  * API 
  * http://code.google.com/intl/ja/apis/gdata/jsdoc/2.2/index.html
@@ -202,7 +203,14 @@ var GCalService = (function(){
 var DateTime = (function(){
   var aDayMilliSecond = 86400000;
   var DateTime = function(obj){
+    /**
+     * @var Date
+     */
     var d = null;
+    /**
+     * @constructor
+     * 
+     */
     var construct = function(obj){
       if (obj instanceof Date){
         d = obj;
@@ -211,7 +219,7 @@ var DateTime = (function(){
       }else if (!isNaN(obj)){
         d = new Date(obj);
       }else if (obj instanceof DateTime){
-        d = obj;
+        d = obj.getDate();
       }else{
         throw new Exception;
       }
@@ -248,13 +256,13 @@ var DateTime = (function(){
     /**
      * @return DateTime
      */
-    this.getMonthFirst = function(){
+    this.getDayOfMonthFirst = function(){
       return new DateTime(new Date(d.getFullYear(), d.getMonth(), 1));
     }
     /**
      * @return DateTime
      */
-    this.getMonthLast = function(){
+    this.getDayOfMonthLast = function(){
       // 来月 - 1日
       return new DateTime(new Date((new Date(d.getFullYear() + Math.floor(d.getMonth()/11), d.getMonth() + 1, 1)).getTime() - aDayMilliSecond));
     }
@@ -291,8 +299,19 @@ var DateTime = (function(){
         return 0;
       }
     }
+    /**
+     * second秒後
+     * @return DateTime
+     */ 
     this.afterBySecond = function(second){
       return new DateTime(d.getTime() + second * 1000);
+    }
+    /**
+     * 先月の始めの日
+     * @return DateTime
+     */
+    this.lastMonth = function(){
+      return this.getDayOfMonthFirst().yesterday().getDayOfMonthFirst();
     }
   }
   return DateTime;
@@ -340,8 +359,8 @@ var App = (function(){
      * 一ヶ月をeach
      */
     var eachDayOfMonth = function(date, callback){
-      var monthFirst = new DateTime(date).getMonthFirst();
-      var datetime = new DateTime(date).getMonthFirst();
+      var monthFirst = new DateTime(date).getDayOfMonthFirst();
+      var datetime = new DateTime(date).getDayOfMonthFirst();
       do{
         callback(datetime.getDate());
         datetime = datetime.tomorrow();
@@ -350,8 +369,11 @@ var App = (function(){
     /**
      *
      * @param google.gdata.calendar.CalendarEntry calendar
+     * @param DateTime today 表示したい月
      */
-    this.showRecentFeeds = function(calendar){
+    this.showFeeds = function(calendar, today){
+      today = new DateTime(today);
+      
       var url = calendar.getLink().getHref()
       var field = view;
       field.empty();
@@ -359,13 +381,19 @@ var App = (function(){
       var title = t('h2').appendTo(field);
       title.text(calendar.getTitle().getText());
 
-      var today = new Date();
-      var date = new google.gdata.DateTime(today, true);
+      var date = new google.gdata.DateTime(today.getDate(), true);
 
       var subtitle = t('h3').appendTo(field);
       var yearMonthFormat = new DateFormat("yyyy/MM");
-      subtitle.text(yearMonthFormat.format(today));
+      console.log(today.getDate());
+      subtitle.text(yearMonthFormat.format(today.getDate()));
 
+      // 先月に移動
+      var moveToLastMonth = t('span').addClass('btn').text('Last Month').appendTo(field);
+      moveToLastMonth.click(function(){
+        self.showFeeds(calendar, today.lastMonth());
+      });
+      
       // レンダリング、ピクセル単位でやった方が分単位で正確にできそう
       // 月のタイムテーブルを出力
       var table = t('table').appendTo(field).addClass('timetable');
@@ -374,7 +402,7 @@ var App = (function(){
       var dateId = function(date){
         return 'tt-' + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '-' + date.getHours();
       }
-      eachDayOfMonth(today, function(day){
+      eachDayOfMonth(today.getDate(), function(day){
         var tr = t('tr').appendTo(tbody);
         var th = t('th').appendTo(tr);
         th.text(day.getDate());
@@ -402,7 +430,7 @@ var App = (function(){
             var a = $('#' + dateId(d.getDate()));
             a.addClass('filled');
             d = d.afterBySecond(3600);
-            console.log(d);
+//            console.log(d);
           }while(d.compareTo(endDate) <= 0);
 
         });
@@ -452,7 +480,7 @@ var App = (function(){
           button.text(title);
           button.attr('href', '#');
           button.click(function(){
-            self.showRecentFeeds(e);
+            self.showFeeds(e);
             return false;
           });
         });
