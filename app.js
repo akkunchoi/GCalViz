@@ -365,13 +365,13 @@ var App = (function(){
 
       var date = new google.gdata.DateTime(today.getDate(), true);
 
-      var subtitle = t('h3').appendTo(field);
+      var dateNavigationField = t('div').addClass('date-navigation').appendTo(field);
+      var subtitle = t('span').addClass('current-date').appendTo(dateNavigationField);
       var yearMonthFormat = new DateFormat("yyyy/MM");
-      console.log(today.getDate());
       subtitle.text(yearMonthFormat.format(today.getDate()));
 
       // 先月に移動
-      var moveToLastMonth = t('span').addClass('btn').text('Last Month').appendTo(field);
+      var moveToLastMonth = t('span').addClass('btn').text('Last Month').appendTo(dateNavigationField);
       moveToLastMonth.click(function(){
         self.showFeeds(calendar, today.lastMonth());
       });
@@ -381,18 +381,23 @@ var App = (function(){
       var table = t('table').appendTo(field).addClass('timetable');
       var tbody = t('tbody').appendTo(table);
 
+      var minutesDiv = 6;
       var dateId = function(date){
-        return 'tt-' + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '-' + date.getHours();
+        return 'tt-'
+          + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() 
+          + '-' + date.getHours() + '-' + Math.floor(date.getMinutes() / (60 / minutesDiv));
       }
       eachDayOfMonth(today.getDate(), function(day){
         var tr = t('tr').appendTo(tbody);
         var th = t('th').appendTo(tr);
         th.text(day.getDate());
         _(24).times(function(i){
-          var td = t('td').appendTo(tr);
-          var tdTime = new Date(day.getFullYear(), day.getMonth(), day.getDate(), i+1, 0, 0);
-          td.attr('id', dateId(tdTime));
-          td.html('&nbsp;&nbsp;&nbsp;&nbsp;');
+          _(minutesDiv).times(function(j){
+            var td = t('td').appendTo(tr);
+            var tdTime = new Date(day.getFullYear(), day.getMonth(), day.getDate(), i+1, j * (60 / minutesDiv));
+            td.attr('id', dateId(tdTime));
+            td.html('&nbsp;');
+          });
         });
       });
 
@@ -407,12 +412,27 @@ var App = (function(){
           var ms = endDate.getTime() - startDate.getTime();
           var valHour  = Math.floor(ms / 3600 / 10) / 100;
 
+          var func = function(){
+            console.log(startDate, endDate);
+          }
+          
           var d = new DateTime(startDate);
           do{
             var a = $('#' + dateId(d.getDate()));
             a.addClass('filled');
-            d = d.afterBySecond(3600);
-//            console.log(d);
+//          a.CreateBubblePopup({
+//									position : 'top',
+//									align	 : 'center',
+//									innerHtml: startDate + ':' + endDate,
+//									innerHtmlStyle: {
+//                    color:'#FFFFFF', 
+//                    'text-align':'center'
+//                  },
+//                  themeName: 	'all-black',
+//									themePath: 	'js/jqbp/jquerybubblepopup-theme'
+//								});
+            
+            d = d.afterBySecond(3600 / minutesDiv);
           }while(d.compareTo(endDate) <= 0);
 
         });
