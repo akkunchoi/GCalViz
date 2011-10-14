@@ -14,6 +14,7 @@ ToDo
 - [Done] 月を変更する
   - 月移動
 - 土日を色分け
+- Hourをグラフ表示にわかりやすく表示
 - 日単位、月単位で合計時間を出力
 - 薬いつ飲んだか等検出したい。汎用化難しいか
 - pushState/breadcrumbs/back UI or something

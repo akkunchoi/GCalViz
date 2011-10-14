@@ -412,9 +412,9 @@ var App = (function(){
           var ms = endDate.getTime() - startDate.getTime();
           var valHour  = Math.floor(ms / 3600 / 10) / 100;
 
-          var func = function(){
-            console.log(startDate, endDate);
-          }
+//          var func = function(){
+//            console.log(startDate, endDate);
+//          }
           
           var d = new DateTime(startDate);
           do{
