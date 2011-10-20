@@ -24,6 +24,7 @@ ToDo
 - iPhone最適化
 - mouseoverで詳細表示
 - Cache?
+- Bug: 月をまたいだ場合の時間が表示されない
 
 ChangeLog
 ----------------
