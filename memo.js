@@ -30,7 +30,7 @@ function doAction(){
   service = new google.gdata.calendar.CalendarService
     ("calendar-sample");
 
-  if (!GoogleAuth.checkLogin()){
+  if (!GAuth.checkLogin()){
     alert("ログインしてないよ！");
     return;
   }
@@ -107,3 +107,18 @@ function createSingleEvent(){
   calendarService.insertEntry(feedUri, entry, callback, 
       handleError, google.gdata.calendar.CalendarEventEntry);
 }
+
+
+// ================================================================
+//a.CreateBubblePopup({
+//        position : 'top',
+//        align	 : 'center',
+//        innerHtml: startDate + ':' + endDate,
+//        innerHtmlStyle: {
+//          color:'#FFFFFF', 
+//          'text-align':'center'
+//        },
+//        themeName: 	'all-black',
+//        themePath: 	'js/jqbp/jquerybubblepopup-theme'
+//      });
+
