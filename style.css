@@ -6,18 +6,36 @@ h1{
   margin: 5px 0px;
 }
 
+.date-navigation{
+  margin: 0px;
+  padding: 0px;
+}
+.date-navigation .current-date{
+  width: 100px;
+  display: inline-block;
+  font-size: 20px;
+}
 table.timetable{
-  width: 60%;
+  clear: both;
+  width: auto;
   border-collapse: collapse;
+  margin: 0px;
+  padding: 0px;
+  border: 1px solid #DDD;
 }
 table.timetable td{
-  border: 1px solid black;
+  border: 0px;
 }
 table.timetable .filled{
-  background-color: #F00;
+  background-color: #F99;
+  cursor: pointer;
 }
-table.timetable th, table.timetable td {
-  padding: 5px 5px 4px;
-  line-height: 8px;
-  text-align: left;
+table.timetable th{
+  padding: 1px 3px;
+  text-align: right;
+  width: 20px;
+  border: 1px solid #DDD;
+}
+table.timetable td {
+  padding: 0px;
 }
