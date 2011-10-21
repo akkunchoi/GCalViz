@@ -1,8 +1,19 @@
 GCalViz: Google Calendar Visualizer on client-side JavaScript
+
+Overview
 ================
 
+Features
+
+- To look over your Google Calendar.
+- Not to send your data to outsider's server.
+
+The concrete purpose of this tool is visualization and analyzation of 
+a [sleep diary](http://en.wikipedia.org/wiki/Sleep_diary). Though, I shall make 
+it as generalized as possible.
+
 ToDo
-----------------
+================
 
 - [Done] Calendarを選択させる
 - [Done] 月間グラフを出力する
@@ -27,5 +38,5 @@ ToDo
 - Bug: 月をまたいだ場合の時間が表示されない
 
 ChangeLog
-----------------
+================
 2011-10-10 v0.0.1 first release
