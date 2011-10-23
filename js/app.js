@@ -147,7 +147,7 @@ var App = (function(){
         }
         return day;
       }
-      var render = function(e){
+      var render = function(k, e){
         var times = e.getTimes();
         var startDate = google.gdata.DateTime.fromIso8601(times[0].startTime).getDate();
         var endDate = google.gdata.DateTime.fromIso8601(times[0].endTime).getDate();
@@ -164,7 +164,7 @@ var App = (function(){
       }
       service.getAllFeeds(url)
         .then(function(res){
-          _.each(res, render);
+          $.each(res, render);
         }).then(function(){
         });
       
