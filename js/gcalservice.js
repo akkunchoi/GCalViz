@@ -63,7 +63,7 @@ var GCalService = (function(){
       query.setOrderBy(google.gdata.calendar.CalendarEventQuery.ORDERBY_START_TIME);
       query.setSortOrder(google.gdata.calendar.CalendarEventQuery.SORTORDER_ASCENDING);
       query.setSingleEvents(true);
-      query.setMaxResults(10); // どこまで取得可能なのか？
+      query.setMaxResults(100); // どこまで取得可能なのか？
       
       var dfd = jQuery.Deferred();
       

@@ -70,7 +70,13 @@ var DateTime = (function(){
      */
     this.getDayOfMonthLast = function(){
       // 来月 - 1日
-      return new DateTime(new Date((new Date(d.getFullYear() + Math.floor(d.getMonth()/11), d.getMonth() + 1, 1)).getTime() - aDayMilliSecond));
+      return new DateTime(
+        new Date(
+          (
+            new Date(d.getFullYear() + Math.floor(d.getMonth()/11), (d.getMonth() + 1)%12, 1)
+          ).getTime() - aDayMilliSecond
+        )
+      );
     }
     /**
      * @return DateTime
@@ -118,6 +124,25 @@ var DateTime = (function(){
      */
     this.lastMonth = function(){
       return this.getDayOfMonthFirst().yesterday().getDayOfMonthFirst();
+    }
+    /**
+     * 来月の始めの日
+     * @return DateTime
+     */
+    this.nextMonth = function(){
+      return this.getDayOfMonthLast().tomorrow();
+    }
+    /**
+     * 
+     * @require DateFormat
+     * @param DateFormat format
+     * @return string
+     */
+    this.format = function(format){
+      if (typeof format == 'string'){
+        format = new DateFormat(format);
+      }
+      return format.format(this.getDate());
     }
   }
   return DateTime;

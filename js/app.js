@@ -66,11 +66,13 @@ var App = (function(){
 
       loginButton.click(function(){
         gcalAuth.login();
+        return false;
       });
       
       logoutButton.click(function(){
         gcalAuth.logout();
         location.reload();
+        return false;
       });
 
       loginButton.show();
@@ -113,40 +115,65 @@ var App = (function(){
      * @param google.gdata.calendar.CalendarEntry calendar
      * @param DateTime today 表示したい月
      */
-    this.showFeeds = function(calendar){
+    this.showFeeds = function(calendar, today){
+      today = today || new DateTime();
       var url = calendar.getLink().getHref()
       view.empty();
 
       var backlink = t('a')
         .attr('href', '#')
-        .text('All Calendars')
+        .text('Back to select calendars')
         .addClass('backlink')
         .appendTo(view)
         .click(function(){
           self.showCalendars();
+          return false;
         });
       var title = t('h2').appendTo(view);
       title.text(calendar.getTitle().getText());
 
-      var calcDayId = function(date){
-        return 'day-'
-          + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate();
-      }
-      var timetable = t('div').addClass('timetable').appendTo(view);
-      var yearMonthFormat = new DateFormat("yyyy/MM/dd");
-      var timeFormat = new DateFormat("HH:mm:ss");
+      var dateNav = t('div').addClass('date-navigation').appendTo(view);
+      var yearMonthFormat = new DateFormat('yyyy-MM');
+      t('a').attr('href', '#')
+        .text(today.lastMonth().format(yearMonthFormat))
+        .click(function(){
+          self.showFeeds(calendar, today.lastMonth());
+          return false;
+        })
+        .appendTo(dateNav);
+      t('span').addClass('this-month')
+        .text(today.format(yearMonthFormat))
+        .appendTo(dateNav);
+      t('a').attr('href', '#')
+        .text(today.nextMonth().format(yearMonthFormat))
+        .click(function(){
+          self.showFeeds(calendar, today.nextMonth());
+          return false;
+        })
+        .appendTo(dateNav);
       
-      var getDayField = function(date){
-        var day = $('#' + calcDayId(date));
-        if ($('#' + calcDayId(date)).size() == 0){
-          day = t('div').addClass('timetable-day')
-            .attr('id', calcDayId(date))
-            .appendTo(timetable);
-          t('span').text(yearMonthFormat.format(date))
-            .appendTo(day);
-        }
-        return day;
-      }
+      var timetable = t('div').addClass('timetable').attr('id', 'timetable').appendTo(view);
+//      var yearMonthFormat = new DateFormat("yyyy/MM/dd");
+//      var timeFormat = new DateFormat("HH:mm:ss");
+//      var fullDateFormat = new DateFormat("yyyy/MM/dd HH:mm:ss");
+//      var hmFormat = new DateFormat("HH:mm");
+      
+//      var calcDayId = function(date){
+//        return 'day-'
+//          + date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate();
+//      }
+//      
+//      var getDayField = function(date){
+//        var day = $('#' + calcDayId(date));
+//        if ($('#' + calcDayId(date)).size() == 0){
+//          day = t('div').addClass('timetable-day')
+//            .attr('id', calcDayId(date))
+//            .appendTo(timetable);
+//          t('span').text(yearMonthFormat.format(date))
+//            .appendTo(day);
+//        }
+//        return day;
+//      }
 //      // text render
 //      var render = function(k, e){
 //        var times = e.getTimes();
@@ -163,28 +190,83 @@ var App = (function(){
 //          .text('e' + timeFormat.format(endDate))
 //          .appendTo(eDay);
 //      }
-      // text render
+
+      var canvasFullWidth = timetable.width();
+      var canvasFullHeight = 600;
+      var canvasPadding = 20;
+      var canvasWidth = canvasFullWidth - canvasPadding * 2;
+      var r = Raphael('timetable', canvasFullWidth, canvasFullHeight);
+      // grid
+      var gridAttr = {
+        'stroke': '#000',
+        'stroke-dasharray': '. ',
+        'stroke-width': 0.3
+      };
+      var tx = canvasPadding;
+      var ty = canvasPadding;
+      var drawGrid = function(){
+        var numXGrid = 24;
+        var w = Math.floor(canvasWidth / numXGrid * 10) / 10;
+        var h = canvasFullHeight;
+        for (var i = 0; i < numXGrid+1; i++){
+          r.path(['M', tx + i * w, ty, 'L', tx + i * w, ty + h].join(',')).attr(gridAttr);
+        }
+      }
+      drawGrid();
+
+      var entryAttr = {
+        fill: 'pink', 
+        stroke: '#ff8888',
+        opacity: '0.5'
+      };
+      var entryHeight = 18;
+      var firstDate = null;
+      var secADay = 3600 * 24; // 86400
+      var drawEntry = function(startDate, endDate){
+        if (firstDate === null){
+          firstDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        }
+        var stime = startDate.getHours() * 3600 + startDate.getMinutes() * 60 + startDate.getSeconds();
+        var etime = endDate.getHours() * 3600 + endDate.getMinutes() * 60 + endDate.getSeconds();
+        if (stime > etime){
+          etime = secADay;
+          drawEntry(new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()), endDate);
+        }
+        var secPerPixcel = secADay / canvasWidth;
+        var stimePP = stime / secPerPixcel;
+        var etimePP = etime / secPerPixcel;
+        var dh = Math.floor((startDate.getTime() - firstDate.getTime()) / secADay / 1000) + 1;
+        var ex = tx;
+        var ey = ty + dh * entryHeight;
+        var rect = r.rect(ex + stimePP, ey - entryHeight/2, (etimePP - stimePP), entryHeight).attr(entryAttr);
+        
+        r.text(tx, ey, startDate.getDate()).attr({
+          'font-family': 'Play',
+          'text-anchor': 'start',
+          'font-size': '18px',
+          'fill': '#AAA'
+        });
+        
+//        r.text(ex + stimePP, ey, Math.floor((etime - stime)/360)/10 ).attr({
+//          'text-anchor': 'start',
+//          'font-size': '12px',
+//          'fill': '#999'
+//        });
+      }
+      
       var render = function(k, e){
         var times = e.getTimes();
         var startDate = google.gdata.DateTime.fromIso8601(times[0].startTime).getDate();
         var endDate = google.gdata.DateTime.fromIso8601(times[0].endTime).getDate();
-        
-        var sDay = getDayField(startDate);
-        t('span').addClass('timetable-entry')
-          .text('s' + timeFormat.format(startDate))
-          .appendTo(sDay);
-          
-        var eDay = getDayField(endDate);
-        t('span').addClass('timetable-entry')
-          .text('e' + timeFormat.format(endDate))
-          .appendTo(eDay);
+        drawEntry(startDate, endDate);
       }
-      service.getAllFeeds(url)
+
+      service.getFeeds(url, today.getDate())
         .then(function(res){
           $.each(res, render);
         }).then(function(){
           
-        });
+      });
       
 //          // 合計時間
 //          var ms = endDate.getTime() - startDate.getTime();

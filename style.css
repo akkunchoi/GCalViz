@@ -39,7 +39,7 @@ body{
  */
 .view-second
 {
-  margin: 40px 0px;
+  margin: 40px 100px;
   min-height: 500px;
 }
 .view-second h1{
@@ -57,7 +57,7 @@ body{
 }
 .view-second .calendars li{
   display: inline-block;
-  width: 260px;
+  width: 230px;
   margin: 2px;
   padding: 0px;
   font-size: 18px;
@@ -94,8 +94,17 @@ body{
   -webkit-animation-iteration-count: infinite;
 }
 
-.timetable-entry{
+.view-second .timetable{
+}
+.view-second .timetable-entry{
   margin: 0px 10px;
+}
+.view-second .date-navigation{
+  text-align: center;
+}
+.view-second .date-navigation .this-month{
+  margin: 0px 20px;
+  font-weight: bold;
 }
 
 /*.date-navigation{
