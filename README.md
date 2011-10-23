@@ -1,5 +1,7 @@
 GCalViz: Google Calendar Visualizer on client-side JavaScript
 
+[demo](http://akkunchoi.info/gcalviz/)
+
 Overview
 ================
 
