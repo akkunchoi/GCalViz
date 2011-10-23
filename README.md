@@ -44,6 +44,8 @@ ToDo
 
 ChangeLog
 ================
-2011-10-23 v0.0.3 Rewrite rendering calendar to on raphael
-2011-10-10 v0.0.1 first release
+
+- 2011-10-23 v0.0.3 Rewrite rendering calendar to on raphael
+- 2011-10-10 v0.0.1 first release
+
 
