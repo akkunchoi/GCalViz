@@ -147,6 +147,23 @@ var App = (function(){
         }
         return day;
       }
+//      // text render
+//      var render = function(k, e){
+//        var times = e.getTimes();
+//        var startDate = google.gdata.DateTime.fromIso8601(times[0].startTime).getDate();
+//        var endDate = google.gdata.DateTime.fromIso8601(times[0].endTime).getDate();
+//        
+//        var sDay = getDayField(startDate);
+//        t('span').addClass('timetable-entry')
+//          .text('s' + timeFormat.format(startDate))
+//          .appendTo(sDay);
+//          
+//        var eDay = getDayField(endDate);
+//        t('span').addClass('timetable-entry')
+//          .text('e' + timeFormat.format(endDate))
+//          .appendTo(eDay);
+//      }
+      // text render
       var render = function(k, e){
         var times = e.getTimes();
         var startDate = google.gdata.DateTime.fromIso8601(times[0].startTime).getDate();
@@ -166,6 +183,7 @@ var App = (function(){
         .then(function(res){
           $.each(res, render);
         }).then(function(){
+          
         });
       
 //          // 合計時間
