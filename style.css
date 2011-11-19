@@ -68,21 +68,21 @@ body{
   text-decoration: none;
   padding: 10px;
   
-  border: 1px solid #EEF;
+  border: 1px solid #CCF;
 	-webkit-border-radius: 10px;
 }
 
 @-webkit-keyframes mycolor {
   0%{
-    background-color: #FFF;
-  }
-
-  10%{
     background-color: #EEF;
   }
 
+  10%{
+    background-color: #DDF;
+  }
+
   100%{
-    background-color: #FFF;
+    background-color: #EEF;
   }
 }
 

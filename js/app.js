@@ -217,7 +217,7 @@ var App = (function(){
       var entryAttr = {
         fill: 'pink', 
         stroke: '#ff8888',
-        opacity: '0.5'
+        opacity: '0.8'
       };
       var entryHeight = 18;
       var firstDate = null;
