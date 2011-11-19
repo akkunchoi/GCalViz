@@ -28,7 +28,7 @@ ToDo
   - [Done] 今月の一覧を取得する
   - [Done] All day Eventを除く
 - [Done] 分単位で出力する
-- カレンダーのデフォルト設定
+- [Done] カレンダーのデフォルト設定
 - [Done] 月を変更する
   - [Done] 月移動
 - 土日を色分け
@@ -43,6 +43,7 @@ ToDo
 - mouseoverで詳細表示
 - Cache?
 - Bug: 月をまたいだ場合の時間が表示されない
+- localStorageのクリア
 
 ChangeLog
 ================

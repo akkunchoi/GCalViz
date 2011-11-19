@@ -16,7 +16,7 @@ var App = (function(){
    * 前提：onLoad完了
    * 
    */
-  var App = function(){
+  return function(){
     var self = this;
     var $ = jQuery;
     var gcalAuth = new GAuth("https://www.google.com/calendar/feeds/");
@@ -81,8 +81,16 @@ var App = (function(){
         loginButton.hide();
         logoutButton.show();
         
-        // show calendars
-        this.showCalendars();
+        var defaultCalendar = self.getDefaultCalendar();
+        if (defaultCalendar){
+          // switch to view-second
+          mainView.removeClass().addClass('view-second');
+
+          self.showFeeds(defaultCalendar);
+        }else{
+          // show calendars
+          this.showCalendars();
+        }
       }
     }
     /**
@@ -95,7 +103,8 @@ var App = (function(){
         
       view.empty();
       t('h2').text('Loading...').appendTo(view);
-      service.retrieveAllCalendars().then(function(res){
+      
+      this.retrieveCalendars().then(function(res){
         view.empty();
 //        t('h2').text('Please choose a calendar').appendTo(view);
         var div = listify(res, function(e, button, li){
@@ -103,12 +112,68 @@ var App = (function(){
           button.text(title);
           button.attr('href', '#');
           button.click(function(){
+            self.saveDefaultCalendar(e);
             self.showFeeds(e);
             return false;
           });
         });
         view.append(div.addClass('calendars'));
       });
+    }
+    /**
+     * wrapped GCalService#retrieveAllCalendars()
+     * for using localStorage
+     * 
+     * @return jQuery.Deferred
+     */
+    this.retrieveCalendars = function(callback){
+      // localStorageにデータがあればそれを表示
+      if (localStorage['gcalviz.calendars']){
+        var parsed = JSON.parse(localStorage['gcalviz.calendars']);
+        var d = jQuery.Deferred();
+        var ret = [];
+        $.each(parsed, function(k, cal){
+          ret.push(new CalendarFeed(cal));
+        })
+        d.resolve(ret);
+        return d.promise();
+      }
+      
+      var dfd = service.retrieveAllCalendars();
+      
+      dfd.then(function(res){
+        var cals = {};
+        $.each(res, function(i, calendar){
+          var store = {
+            'id': calendar.getId().getValue(),
+            'title': calendar.getTitle().getText(),
+            'link': calendar.getLink().getHref()
+          };
+          cals[calendar.getId().getValue()] = store;
+        });
+        localStorage['gcalviz.calendars'] = JSON.stringify(cals);
+      });
+      return dfd;
+    }
+    this.saveDefaultCalendar = function(calendar){
+      localStorage['gcalviz.selectedCalendar'] = calendar.getId().getValue();
+    }
+    this.clearDefaultCalendar = function(){
+      localStorage['gcalviz.selectedCalendar'] = null;
+    }
+    /**
+     *
+     * @return CalendarFeed|null
+     */
+    this.getDefaultCalendar = function(){
+      var calId = localStorage['gcalviz.selectedCalendar'];
+      if (calId && localStorage['gcalviz.calendars']){
+        var parsed = JSON.parse(localStorage['gcalviz.calendars']);
+        if (parsed[calId]){
+          return new CalendarFeed(parsed[calId]);
+        }
+      }
+      return null;
     }
     /**
      *
@@ -196,9 +261,11 @@ var App = (function(){
       var canvasPadding = 20;
       var canvasWidth = canvasFullWidth - canvasPadding * 2;
       var r = Raphael('timetable', canvasFullWidth, canvasFullHeight);
-      // grid
+      //
+      // draw grids
+      //
       var gridAttr = {
-        'stroke': '#000',
+        'stroke': '#999',
         'stroke-dasharray': '. ',
         'stroke-width': 0.3
       };
@@ -209,7 +276,12 @@ var App = (function(){
         var w = Math.floor(canvasWidth / numXGrid * 10) / 10;
         var h = canvasFullHeight;
         for (var i = 0; i < numXGrid+1; i++){
-          r.path(['M', tx + i * w, ty, 'L', tx + i * w, ty + h].join(',')).attr(gridAttr);
+          var gridAttrLocal = $.extend({}, gridAttr);
+          // 6時間ごとに強調
+          if (i % 6 == 0){
+            gridAttrLocal.stroke = '#000';
+          }
+          r.path(['M', tx + i * w, ty, 'L', tx + i * w, ty + h].join(',')).attr(gridAttrLocal);
         }
       }
       drawGrid();
@@ -240,13 +312,14 @@ var App = (function(){
         var ey = ty + dh * entryHeight;
         var rect = r.rect(ex + stimePP, ey - entryHeight/2, (etimePP - stimePP), entryHeight).attr(entryAttr);
         
+        // 日付表示。１日につき一度だけ描画するようにしたい。
         r.text(tx, ey, startDate.getDate()).attr({
           'font-family': 'Play',
           'text-anchor': 'start',
           'font-size': '18px',
           'fill': '#AAA'
         });
-        
+        // entryの時間を表示
 //        r.text(ex + stimePP, ey, Math.floor((etime - stime)/360)/10 ).attr({
 //          'text-anchor': 'start',
 //          'font-size': '12px',
@@ -263,6 +336,11 @@ var App = (function(){
 
       service.getFeeds(url, today.getDate())
         .then(function(res){
+          // 
+          // Todo: いったん抽象化してレイヤーを作った方がいいかも。
+          // 日付をまたぐ場合に分割している。このままでは表示とオブジェクトが密になっている。
+          // 抽象化できればその日の合計が計算しやすくなる？
+          // 
           $.each(res, render);
         }).then(function(){
           
@@ -338,7 +416,6 @@ var App = (function(){
     }
     this.start();
   }
-  return App;
 })();
 
 google.setOnLoadCallback(function(){
@@ -347,7 +424,7 @@ google.setOnLoadCallback(function(){
     $.getScript("js/gauth.js"),
     $.getScript("js/gcalservice.js"),
     $.getScript("js/datetime.js"),
-    $.getScript("js/calendar.js"),
+    $.getScript("js/calendar-feed.js"),
     $.Deferred(function(df){
       $(df.resolve);
     })
